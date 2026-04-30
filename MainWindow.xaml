@@ -1,0 +1,134 @@
+﻿<Window x:Class="ExpressionCompilerWpf.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Рекурсивный спуск: ошибки, тетрады и ПОЛИЗ"
+        Height="760"
+        Width="1120"
+        MinHeight="650"
+        MinWidth="980">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="2*" />
+            <RowDefinition Height="2*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   FontSize="22"
+                   FontWeight="SemiBold"
+                   Text="Анализ арифметических выражений" />
+
+        <Grid Grid.Row="1" Margin="0,12,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBox Grid.Column="0"
+                     MinHeight="42"
+                     VerticalContentAlignment="Center"
+                     FontFamily="Consolas"
+                     FontSize="16"
+                     Text="{Binding Source, UpdateSourceTrigger=PropertyChanged}" />
+
+            <Button Grid.Column="1"
+                    Width="130"
+                    Margin="10,0,0,0"
+                    Command="{Binding AnalyzeCommand}"
+                    Content="Анализировать" />
+
+            <Button Grid.Column="2"
+                    Width="90"
+                    Margin="10,0,0,0"
+                    Command="{Binding ClearCommand}"
+                    Content="Очистить" />
+        </Grid>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.2*" />
+                <ColumnDefinition Width="1.4*" />
+            </Grid.ColumnDefinitions>
+
+            <GroupBox Grid.Column="0" Header="Токены" Margin="0,0,8,8">
+                <DataGrid ItemsSource="{Binding Tokens}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Тип" Binding="{Binding Type}" Width="*" />
+                        <DataGridTextColumn Header="Лексема" Binding="{Binding Lexeme}" Width="*" />
+                        <DataGridTextColumn Header="Позиция" Binding="{Binding Position}" Width="80" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </GroupBox>
+
+            <GroupBox Grid.Column="1" Header="Ошибки и предупреждения" Margin="8,0,0,8">
+                <DataGrid ItemsSource="{Binding Diagnostics}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Уровень" Binding="{Binding Severity}" Width="100" />
+                        <DataGridTextColumn Header="Сообщение" Binding="{Binding Message}" Width="*" />
+                        <DataGridTextColumn Header="Позиция" Binding="{Binding Position}" Width="80" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </GroupBox>
+        </Grid>
+
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.2*" />
+                <ColumnDefinition Width="1.4*" />
+            </Grid.ColumnDefinitions>
+
+            <GroupBox Grid.Column="0" Header="Тетрады" Margin="0,8,8,8">
+                <DataGrid ItemsSource="{Binding Quadruples}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="60" />
+                        <DataGridTextColumn Header="op" Binding="{Binding Op}" Width="*" />
+                        <DataGridTextColumn Header="arg1" Binding="{Binding Arg1}" Width="*" />
+                        <DataGridTextColumn Header="arg2" Binding="{Binding Arg2}" Width="*" />
+                        <DataGridTextColumn Header="result" Binding="{Binding Result}" Width="*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </GroupBox>
+
+            <GroupBox Grid.Column="1" Header="ПОЛИЗ и вычисление" Margin="8,8,0,8">
+                <Grid Margin="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="ПОЛИЗ:" FontWeight="SemiBold" />
+                    <TextBox Grid.Row="1"
+                             Margin="0,6,0,12"
+                             FontFamily="Consolas"
+                             FontSize="16"
+                             IsReadOnly="True"
+                             Text="{Binding Poliz}" />
+                    <StackPanel Grid.Row="2">
+                        <TextBlock Text="Значение:" FontWeight="SemiBold" />
+                        <TextBox Margin="0,6,0,0"
+                                 FontFamily="Consolas"
+                                 FontSize="16"
+                                 IsReadOnly="True"
+                                 Text="{Binding Calculation}" />
+                    </StackPanel>
+                </Grid>
+            </GroupBox>
+        </Grid>
+
+        <Border Grid.Row="4"
+                Padding="10"
+                Background="#10000000"
+                CornerRadius="6">
+            <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
+        </Border>
+    </Grid>
+</Window>
