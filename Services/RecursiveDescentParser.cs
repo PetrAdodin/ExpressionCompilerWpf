@@ -4,9 +4,13 @@ namespace ExpressionCompilerWpf.Services;
 
 public sealed class RecursiveDescentParser
 {
+    private const string ErrorValue = "<error>";
+
     private IReadOnlyList<Token> _tokens = Array.Empty<Token>();
     private readonly List<Diagnostic> _diagnostics = new();
     private readonly List<Quadruple> _quadruples = new();
+    private readonly HashSet<int> _reportedPositions = new();
+
     private int _position;
     private int _tempCounter;
 
@@ -15,12 +19,14 @@ public sealed class RecursiveDescentParser
         _tokens = tokens;
         _diagnostics.Clear();
         _quadruples.Clear();
+        _reportedPositions.Clear();
+
         _position = 0;
         _tempCounter = 0;
 
         var root = ParseE();
-
-        if (Current.Type != TokenType.End)
+s
+        if (!HasErrors && Current.Type != TokenType.End)
         {
             if (Current.Type == TokenType.RightParen)
             {
@@ -32,10 +38,9 @@ public sealed class RecursiveDescentParser
             }
         }
 
-        return new ParseResult(_diagnostics.Count == 0, root, _quadruples.ToList(), _diagnostics.ToList());
+        return new ParseResult(!HasErrors, root, _quadruples.ToList(), _diagnostics.ToList());
     }
 
-    // E → T A. Здесь я возвращаю не узел дерева, а "место" результата: число, id или временную переменную.
     private string ParseE()
     {
         var left = ParseT();
@@ -44,6 +49,7 @@ public sealed class RecursiveDescentParser
         {
             var op = Current.Lexeme;
             Advance();
+
             var right = ParseT();
             left = Emit(op, left, right);
         }
@@ -51,7 +57,6 @@ public sealed class RecursiveDescentParser
         return left;
     }
 
-    // T → F B. Цикл удобнее рекурсивной функции B и сохраняет левую ассоциативность операций.
     private string ParseT()
     {
         var left = ParseF();
@@ -60,6 +65,7 @@ public sealed class RecursiveDescentParser
         {
             var op = Current.Lexeme;
             Advance();
+
             var right = ParseF();
             left = Emit(op, left, right);
         }
@@ -80,6 +86,14 @@ public sealed class RecursiveDescentParser
         {
             var openPosition = Current.Position;
             Advance();
+
+            if (Current.Type == TokenType.RightParen)
+            {
+                AddError("Пропущен операнд внутри скобок.", Current.Position);
+                Advance();
+                return ErrorValue;
+            }
+
             var expression = ParseE();
 
             if (Current.Type != TokenType.RightParen)
@@ -95,22 +109,35 @@ public sealed class RecursiveDescentParser
         if (Current.Type == TokenType.RightParen)
         {
             AddError("Пропущен операнд перед закрывающей скобкой.", Current.Position);
-            return ErrorPlace();
+            return ErrorValue;
         }
 
         if (Current.Type == TokenType.End)
         {
             AddError("Пропущен операнд в конце выражения.", Current.Position);
-            return ErrorPlace();
+            return ErrorValue;
         }
 
-        AddError($"Пропущен операнд перед '{Current.Lexeme}'.", Current.Position);
+        if (Current.Type is TokenType.Plus
+            or TokenType.Minus
+            or TokenType.Multiply
+            or TokenType.Divide
+            or TokenType.Modulo)
+        {
+            AddError($"Пропущен операнд перед '{Current.Lexeme}'.", Current.Position);
+            return ErrorValue;
+        }
+
+        AddError($"Неожиданный токен '{Current.Lexeme}'.", Current.Position);
         Advance();
-        return ErrorPlace();
+        return ErrorValue;
     }
 
     private string Emit(string op, string arg1, string arg2)
     {
+        if (arg1 == ErrorValue || arg2 == ErrorValue)
+            return ErrorValue;
+
         var temp = $"t{++_tempCounter}";
         _quadruples.Add(new Quadruple(_quadruples.Count + 1, op, arg1, arg2, temp));
         return temp;
@@ -118,14 +145,19 @@ public sealed class RecursiveDescentParser
 
     private Token Current => _position < _tokens.Count ? _tokens[_position] : _tokens[^1];
 
+    private bool HasErrors => _diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error);
+
     private void Advance()
     {
         if (_position < _tokens.Count - 1)
             _position++;
     }
 
-    private void AddError(string message, int position) =>
-        _diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error, message, position));
+    private void AddError(string message, int position)
+    {
+        if (!_reportedPositions.Add(position))
+            return;
 
-    private static string ErrorPlace() => "<error>";
+        _diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error, message, position));
+    }
 }
