@@ -25,7 +25,7 @@ public sealed class RecursiveDescentParser
         _tempCounter = 0;
 
         var root = ParseE();
-s
+
         if (!HasErrors && Current.Type != TokenType.End)
         {
             if (Current.Type == TokenType.RightParen)
