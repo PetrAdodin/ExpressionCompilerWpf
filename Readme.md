@@ -45,7 +45,9 @@ abc_12+34
 ```
 
 # Лексические и синтаксические ошибки
-![диаграмма лексера](https://github.com/user-attachments/assets/622e0ce6-1d46-45eb-ac20-a21b89036090)
+![диаграмма лексера](https://github.com/user-attachments/assets/eedf22ad-e246-40c1-bf24-01c4d21c96f6)
+
+
 
 ![схема рекурсивного спуска](https://github.com/user-attachments/assets/0e9ae1a2-3500-495f-bacc-9c959033dba1)
 
