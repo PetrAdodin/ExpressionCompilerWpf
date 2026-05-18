@@ -59,10 +59,13 @@ public sealed class MainViewModel : ObservableObject
         Tokens.Clear();
         Diagnostics.Clear();
         Quadruples.Clear();
+
         Poliz = string.Empty;
         Calculation = string.Empty;
 
-        var lexerResult = _lexer.Analyze(Source ?? string.Empty);
+        var source = Source ?? string.Empty;
+        var lexerResult = _lexer.Analyze(source);
+
         foreach (var token in lexerResult.Tokens.Where(t => t.Type != TokenType.End))
             Tokens.Add(token);
 
@@ -76,6 +79,7 @@ public sealed class MainViewModel : ObservableObject
         }
 
         var parseResult = _parser.Parse(lexerResult.Tokens);
+
         foreach (var diagnostic in parseResult.Diagnostics)
             Diagnostics.Add(diagnostic);
 
@@ -89,31 +93,36 @@ public sealed class MainViewModel : ObservableObject
             Quadruples.Add(quadruple);
 
         var polizResult = _polizService.BuildAndEvaluate(lexerResult.Tokens);
+
         foreach (var diagnostic in polizResult.Diagnostics)
             Diagnostics.Add(diagnostic);
 
-        if (polizResult.IsSuccess)
+        Poliz = polizResult.AsText;
+        Calculation = polizResult.Value?.ToString() ?? string.Empty;
+
+        if (polizResult.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
         {
-            Poliz = polizResult.AsText;
-            Calculation = polizResult.Value?.ToString() ?? string.Empty;
-        }
-        else
-        {
-            Poliz = string.Empty;
-            Calculation = string.Empty;
+            Status = "Синтаксический разбор корректен, тетрады построены, но вычисление ПОЛИЗ завершилось ошибкой.";
+            return;
         }
 
-        Status = Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Warning)
-            ? "Разбор корректен, тетрады построены. ПОЛИЗ не вычислялся из-за ограничений задания."
-            : "Разбор корректен: тетрады, ПОЛИЗ и значение построены.";
+        if (polizResult.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Warning))
+        {
+            Status = "Синтаксический разбор корректен, тетрады построены. ПОЛИЗ не вычислялся из-за ограничений задания.";
+            return;
+        }
+
+        Status = "Разбор корректен: тетрады, ПОЛИЗ и значение построены.";
     }
 
     private void Clear()
     {
         Source = string.Empty;
+
         Tokens.Clear();
         Diagnostics.Clear();
         Quadruples.Clear();
+
         Poliz = string.Empty;
         Calculation = string.Empty;
         Status = "Очищено.";

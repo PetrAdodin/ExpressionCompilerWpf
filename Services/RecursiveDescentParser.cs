@@ -5,6 +5,7 @@ namespace ExpressionCompilerWpf.Services;
 public sealed class RecursiveDescentParser
 {
     private const string ErrorValue = "<error>";
+    private const int MaxDiagnostics = 50;
 
     private IReadOnlyList<Token> _tokens = Array.Empty<Token>();
     private readonly List<Diagnostic> _diagnostics = new();
@@ -14,15 +15,24 @@ public sealed class RecursiveDescentParser
     private int _position;
     private int _tempCounter;
 
-    public ParseResult Parse(IReadOnlyList<Token> tokens)
+    public ParseResult Parse(IReadOnlyList<Token>? tokens)
     {
-        _tokens = tokens;
+        _tokens = tokens is { Count: > 0 }
+            ? tokens
+            : new[] { new Token(TokenType.End, string.Empty, 0) };
+
         _diagnostics.Clear();
         _quadruples.Clear();
         _reportedPositions.Clear();
 
         _position = 0;
         _tempCounter = 0;
+
+        if (Current.Type == TokenType.End)
+        {
+            AddError("Пустое выражение.", Current.Position);
+            return new ParseResult(false, ErrorValue, Array.Empty<Quadruple>(), _diagnostics.ToList());
+        }
 
         var root = ParseE();
 
@@ -41,6 +51,7 @@ public sealed class RecursiveDescentParser
         return new ParseResult(!HasErrors, root, _quadruples.ToList(), _diagnostics.ToList());
     }
 
+    // E → T A
     private string ParseE()
     {
         var left = ParseT();
@@ -57,6 +68,7 @@ public sealed class RecursiveDescentParser
         return left;
     }
 
+    // T → F B
     private string ParseT()
     {
         var left = ParseF();
@@ -91,6 +103,12 @@ public sealed class RecursiveDescentParser
             {
                 AddError("Пропущен операнд внутри скобок.", Current.Position);
                 Advance();
+                return ErrorValue;
+            }
+
+            if (Current.Type == TokenType.End)
+            {
+                AddError("Пропущен операнд после открывающей скобки.", openPosition);
                 return ErrorValue;
             }
 
@@ -143,7 +161,9 @@ public sealed class RecursiveDescentParser
         return temp;
     }
 
-    private Token Current => _position < _tokens.Count ? _tokens[_position] : _tokens[^1];
+    private Token Current => _position < _tokens.Count
+        ? _tokens[_position]
+        : _tokens[^1];
 
     private bool HasErrors => _diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error);
 
@@ -155,6 +175,9 @@ public sealed class RecursiveDescentParser
 
     private void AddError(string message, int position)
     {
+        if (_diagnostics.Count >= MaxDiagnostics)
+            return;
+
         if (!_reportedPositions.Add(position))
             return;
 
