@@ -14,6 +14,7 @@ public sealed class RecursiveDescentParser
 
     private int _position;
     private int _tempCounter;
+    private int _parenDepth;
 
     public ParseResult Parse(IReadOnlyList<Token>? tokens)
     {
@@ -27,6 +28,7 @@ public sealed class RecursiveDescentParser
 
         _position = 0;
         _tempCounter = 0;
+        _parenDepth = 0;
 
         if (Current.Type == TokenType.End)
         {
@@ -36,13 +38,13 @@ public sealed class RecursiveDescentParser
 
         var root = ParseE();
 
-        if (!HasErrors && Current.Type != TokenType.End)
+        if (Current.Type != TokenType.End)
         {
             if (Current.Type == TokenType.RightParen)
             {
-                AddError("Лишняя закрывающая скобка.", Current.Position);
+                ReportRemainingExtraClosingParentheses();
             }
-            else
+            else if (!HasErrors)
             {
                 AddError($"Лишний токен '{Current.Lexeme}' после конца выражения.", Current.Position);
             }
@@ -56,7 +58,7 @@ public sealed class RecursiveDescentParser
     {
         var left = ParseT();
 
-        while (Current.Type is TokenType.Plus or TokenType.Minus)
+        while (!HasErrors && Current.Type is TokenType.Plus or TokenType.Minus)
         {
             var op = Current.Lexeme;
             Advance();
@@ -73,7 +75,7 @@ public sealed class RecursiveDescentParser
     {
         var left = ParseF();
 
-        while (Current.Type is TokenType.Multiply or TokenType.Divide or TokenType.Modulo)
+        while (!HasErrors && Current.Type is TokenType.Multiply or TokenType.Divide or TokenType.Modulo)
         {
             var op = Current.Lexeme;
             Advance();
@@ -97,18 +99,22 @@ public sealed class RecursiveDescentParser
         if (Current.Type == TokenType.LeftParen)
         {
             var openPosition = Current.Position;
+
+            _parenDepth++;
             Advance();
 
             if (Current.Type == TokenType.RightParen)
             {
                 AddError("Пропущен операнд внутри скобок.", Current.Position);
                 Advance();
+                _parenDepth--;
                 return ErrorValue;
             }
 
             if (Current.Type == TokenType.End)
             {
                 AddError("Пропущен операнд после открывающей скобки.", openPosition);
+                _parenDepth--;
                 return ErrorValue;
             }
 
@@ -117,16 +123,26 @@ public sealed class RecursiveDescentParser
             if (Current.Type != TokenType.RightParen)
             {
                 AddError("Пропущена закрывающая скобка.", openPosition);
+                _parenDepth--;
                 return expression;
             }
 
             Advance();
+            _parenDepth--;
             return expression;
         }
 
         if (Current.Type == TokenType.RightParen)
         {
-            AddError("Пропущен операнд перед закрывающей скобкой.", Current.Position);
+            if (_parenDepth == 0)
+            {
+                AddError("Лишняя закрывающая скобка.", Current.Position);
+            }
+            else
+            {
+                AddError("Пропущен операнд перед закрывающей скобкой.", Current.Position);
+            }
+
             return ErrorValue;
         }
 
@@ -151,9 +167,23 @@ public sealed class RecursiveDescentParser
         return ErrorValue;
     }
 
+    private void ReportRemainingExtraClosingParentheses()
+    {
+        while (Current.Type == TokenType.RightParen)
+        {
+            AddError("Лишняя закрывающая скобка.", Current.Position);
+            Advance();
+        }
+
+        if (Current.Type != TokenType.End && !HasErrorsAt(Current.Position))
+        {
+            AddError($"Лишний токен '{Current.Lexeme}' после конца выражения.", Current.Position);
+        }
+    }
+
     private string Emit(string op, string arg1, string arg2)
     {
-        if (arg1 == ErrorValue || arg2 == ErrorValue)
+        if (HasErrors || arg1 == ErrorValue || arg2 == ErrorValue)
             return ErrorValue;
 
         var temp = $"t{++_tempCounter}";
@@ -183,4 +213,6 @@ public sealed class RecursiveDescentParser
 
         _diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error, message, position));
     }
+
+    private bool HasErrorsAt(int position) => _reportedPositions.Contains(position);
 }

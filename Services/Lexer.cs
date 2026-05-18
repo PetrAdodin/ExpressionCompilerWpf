@@ -87,6 +87,7 @@ public sealed class Lexer
 
                 default:
                     var badLexeme = ReadInvalidLexeme(source, position);
+
                     AddDiagnostic(
                         diagnostics,
                         DiagnosticSeverity.Error,
@@ -104,6 +105,7 @@ public sealed class Lexer
                     DiagnosticSeverity.Warning,
                     "Найдено слишком много ошибок. Дальнейшая лексическая диагностика остановлена.",
                     position);
+
                 break;
             }
         }
@@ -139,11 +141,10 @@ public sealed class Lexer
         string message,
         int position)
     {
-        if (severity == DiagnosticSeverity.Error &&
-            diagnostics.Count(d => d.Severity == DiagnosticSeverity.Error) >= MaxDiagnostics)
-        {
+        var errorCount = diagnostics.Count(d => d.Severity == DiagnosticSeverity.Error);
+
+        if (severity == DiagnosticSeverity.Error && errorCount >= MaxDiagnostics)
             return;
-        }
 
         diagnostics.Add(new Diagnostic(severity, message, position));
     }
