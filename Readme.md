@@ -49,7 +49,7 @@ abc_12+34
 
 
 
-![схема рекурсивного спуска](https://github.com/user-attachments/assets/0e9ae1a2-3500-495f-bacc-9c959033dba1)
+![схема рекурсивного спуска](https://github.com/user-attachments/assets/8529815b-4987-4f55-a1fe-e8454016c000)
 
 ![скриншот1](https://github.com/user-attachments/assets/522c17a0-759c-46a3-846f-b2d57b10bff2)
 
