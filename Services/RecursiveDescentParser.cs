@@ -44,7 +44,7 @@ public sealed class RecursiveDescentParser
             {
                 ReportRemainingExtraClosingParentheses();
             }
-            else if (!HasErrors)
+            else if (!HasErrorsAt(Current.Position))
             {
                 AddError($"Лишний токен '{Current.Lexeme}' после конца выражения.", Current.Position);
             }
@@ -58,7 +58,7 @@ public sealed class RecursiveDescentParser
     {
         var left = ParseT();
 
-        while (!HasErrors && Current.Type is TokenType.Plus or TokenType.Minus)
+        while (Current.Type is TokenType.Plus or TokenType.Minus)
         {
             var op = Current.Lexeme;
             Advance();
@@ -75,7 +75,7 @@ public sealed class RecursiveDescentParser
     {
         var left = ParseF();
 
-        while (!HasErrors && Current.Type is TokenType.Multiply or TokenType.Divide or TokenType.Modulo)
+        while (Current.Type is TokenType.Multiply or TokenType.Divide or TokenType.Modulo)
         {
             var op = Current.Lexeme;
             Advance();

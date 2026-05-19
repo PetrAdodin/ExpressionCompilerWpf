@@ -64,6 +64,7 @@ public sealed class MainViewModel : ObservableObject
         Calculation = string.Empty;
 
         var source = Source ?? string.Empty;
+
         var lexerResult = _lexer.Analyze(source);
 
         foreach (var token in lexerResult.Tokens.Where(t => t.Type != TokenType.End))
@@ -72,20 +73,28 @@ public sealed class MainViewModel : ObservableObject
         foreach (var diagnostic in lexerResult.Diagnostics)
             Diagnostics.Add(diagnostic);
 
-        if (lexerResult.HasErrors)
-        {
-            Status = "Есть лексические ошибки. Синтаксический разбор, тетрады и ПОЛИЗ не выполнялись.";
-            return;
-        }
-
+        /*
+         * Раньше здесь был return при лексических ошибках.
+         * Я убрал его специально: теперь приложение показывает и ошибки лексера,
+         * и ошибки парсера за один запуск анализа.
+         *
+         * Например, для строки:
+         * 1+!((3/2)!
+         *
+         * лексер найдёт два символа '!',
+         * а парсер дополнительно найдёт незакрытую скобку.
+         */
         var parseResult = _parser.Parse(lexerResult.Tokens);
 
         foreach (var diagnostic in parseResult.Diagnostics)
             Diagnostics.Add(diagnostic);
 
-        if (!parseResult.IsSuccess)
+        var hasLexerErrors = lexerResult.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error);
+        var hasParserErrors = parseResult.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error);
+
+        if (hasLexerErrors || hasParserErrors)
         {
-            Status = "Есть синтаксические ошибки. Тетрады и ПОЛИЗ не выводятся как результат корректного разбора.";
+            Status = BuildErrorStatus(hasLexerErrors, hasParserErrors);
             return;
         }
 
@@ -113,6 +122,21 @@ public sealed class MainViewModel : ObservableObject
         }
 
         Status = "Разбор корректен: тетрады, ПОЛИЗ и значение построены.";
+    }
+
+    private static string BuildErrorStatus(bool hasLexerErrors, bool hasParserErrors)
+    {
+        if (hasLexerErrors && hasParserErrors)
+        {
+            return "Есть лексические и синтаксические ошибки. Тетрады и ПОЛИЗ не строятся.";
+        }
+
+        if (hasLexerErrors)
+        {
+            return "Есть лексические ошибки. Тетрады и ПОЛИЗ не строятся.";
+        }
+
+        return "Есть синтаксические ошибки. Тетрады и ПОЛИЗ не строятся.";
     }
 
     private void Clear()
